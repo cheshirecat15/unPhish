@@ -3,7 +3,7 @@ function isPhishing(url){
     const susKeywords=['login','verify','secure', 'update','password','account','bank','gift','free','claim','wallet'];
     const susTLDs=['.xyz','.tk','.top','.ru','.cn'];
 
-    const knownBrands=['google','paypal','amazon','facebook','microsoft','apple'];
+    const knownBrands=['google','paypal','amazon','facebook','microsoft','apple', 'walmart'];
     const substitutions={
         'o':['0'],
         'i':['1','l'],
@@ -42,7 +42,7 @@ function isPhishing(url){
                 spoofedPatterns.push(...newPatterns);
             }
             for(const pattern of spoofedPatterns){
-                if(lowerHost.includes(pattern)&& lowerHost!==`${brand}.com`){
+                if(lowerHost.includes(pattern)&& !lowerHost.endsWith(`${brand}.com`)){
                     return {level: "danger", message: `Potential brand spoofing: ${brand}`};
                 }
             }
