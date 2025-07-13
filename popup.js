@@ -3,9 +3,19 @@ function isPhishing(url){
     const susKeywords=['login','verify','secure', 'update','password','account','bank','gift','free','claim','wallet'];
     const susTLDs=['.xyz','.tk','.top','.ru','.cn'];
 
+    const knownBrands=['google','paypal','amazon','facebook','microsoft','apple'];
+    const substitutions={
+        'o':['0'],
+        'i':['1','l'],
+        'e':['3'],
+        'a':['@'],
+        's':['5','$'],
+        'l':['1','i']
+    }
     try{
         const parsed=new URL(url);
-
+        const lowerPath=parsed.pathname.toLowerCase();
+        const lowerHost=parsed.hostname.toLowerCase();
         //check for ip address in url
         if (ipRegex.test(url)) {
             return {level: "danger", message:"URL uses an IP address"};//level : "danger"
@@ -16,12 +26,32 @@ function isPhishing(url){
             return {level: "danger", message: "Potential IDN homograph attack (xn--domain)"};//level:"danger"
             }
 
+        
+        //Check for spoofing of known brands using character substitution
+        for (const brand of knownBrands) {
+            let spoofedPatterns = [brand];
+            for (const [char, subs] of Object.entries(substitutions)) {
+                const newPatterns =[];
+                for (const pattern of spoofedPatterns) {
+                    if (pattern.includes(char)){
+                        for (const sub of subs) {
+                            newPatterns.push(pattern.replaceAll(char, sub));
+                        }
+                    }
+                }
+                spoofedPatterns.push(...newPatterns);
+            }
+            for(const pattern of spoofedPatterns){
+                if(lowerHost.includes(pattern)&& lowerHost!==`${brand}.com`){
+                    return {level: "danger", message: `Potential brand spoofing: ${brand}`};
+                }
+            }
+        }
+
         //check for suspicious keywords
         for (const keyword of susKeywords){
-            const lowerPath=parsed.pathname.toLowerCase();
-            const lowerHost=parsed.hostname.toLowerCase();
             if (lowerPath.includes(keyword)||lowerHost.includes(keyword)){
-                return {level:"danger", message:`Suspicious keyword in path: ${keyword}`};//level: "danger"
+                return {level:"medium", message:`Suspicious keyword in path: ${keyword}`};//level: "danger"
             }
         }
 
@@ -56,11 +86,11 @@ chrome.tabs.query({active: true,currentWindow: true }, function(tabs){//tabs arr
     const result= isPhishing(url);//fetch the result(safe, medium, danger)
     const status= document.getElementById("status");//variable status grabs <div id="status"> where we'll show the result
 
-    if(result.level=="danger"){
+    if(result.level==="danger"){
         status.textContent= `Danger: ${result.message}`;
         status.className ="status danger"
     }
-    else if(result.level=="medium"){
+    else if(result.level==="medium"){
         status.textContent=`Caution: ${result.message}`;
         status.className="status medium";
     }
